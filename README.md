@@ -2,6 +2,8 @@
 
 교과서 개념을 질문, 사례와 비사례, 근거 기반 설명, 형성 평가, 새로운 상황에의 적용으로 익히는 한국어 학습 웹 앱입니다.
 
+대시보드에는 15초 모션 인트로가 포함되어 있습니다. 영상과 렌더링용 단일 HTML 소스는 저장소 루트의 `intro.mp4`, `intro.html`입니다.
+
 ## 실행
 
 `index.html`을 최신 브라우저에서 열면 바로 사용할 수 있습니다. 설치나 서버가 필요하지 않습니다.
@@ -13,3 +15,15 @@
 - 나만의 수업에 입력한 교과서 내용은 학습 활동의 참고 문장으로 사용됩니다. 앱은 입력하지 않은 교과 지식을 임의로 만들어 내지 않습니다.
 
 학습 흐름은 개념 렌즈, 탐구 연속체와 점진적 스캐폴딩, 질문·형성 평가·피드백, 목표·진행·성취 중심의 게임화를 참고해 설계했습니다.
+
+## 인트로 다시 렌더링
+
+Node.js와 Google Chrome이 설치된 환경에서:
+
+```powershell
+npm install
+npm run intro:storyboard
+npm run intro:render
+```
+
+`intro:storyboard`는 30비트 콘택트 시트를 `.intro-render\storyboard.png`로 만들고, `intro:render`는 60fps 영상·Web Audio WAV 사운드트랙·최종 MP4를 생성합니다. FFmpeg는 `ffmpeg-static` 패키지에서 제공합니다.

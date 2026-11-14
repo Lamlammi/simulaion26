@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=1920,height=1080,initial-scale=1">
+    <meta name="theme-color" content="#f3f1e7">
+    <title>개념산책 — 모션 인트로</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap");
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #f3f1e7; }
+      body { font-family: "Noto Sans KR", sans-serif; }
+      canvas { display: block; width: 100vw; height: 100vh; }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage" width="1920" height="1080" aria-label="개념산책 모션 인트로"></canvas>
+    <script>
+      (() => {
+        "use strict";
+        const WIDTH = 1920;
+        const HEIGHT = 1080;
+        const DURATION = 15;
+        const BEAT = 0.5;
+        const PAPER = "#F3F1E7";
+        const GREEN = "#173B2E";
+        const LIME = "#C8F166";
+        const BLACK = "#080B09";
+        const WHITE = "#FFFFFF";
+        const canvas = document.getElementById("stage");
+        const ctx = canvas.getContext("2d", { alpha: false });
+
+        const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
+        const mix = (a, b, amount) => a + (b - a) * amount;
+        const smooth = (value) => {
+          const x = clamp(value);
+          return x * x * (3 - 2 * x);
+        };
+        const exponentialOut = (value) => {
+          const x = clamp(value);
+          return x === 1 ? 1 : 1 - Math.pow(2, -10 * x);
+        };
+        const criticalSpring = (value) => {
+          const x = clamp(value);
+          const settle = (t) => 1 - (1 + 8 * t) * Math.exp(-8 * t);
+          return settle(x) / settle(1);
+        };
+        const fract = (value) => value - Math.floor(value);
+        const beatPulse = (time) => {
+          const phase = fract(time / BEAT);
+          return Math.exp(-8 * phase);
+        };
+
+        function gridLines(color) {
+          ctx.save();
+          ctx.strokeStyle = color;
+          ctx.globalAlpha = 0.075;
+          ctx.lineWidth = 1;
+          for (let x = 96; x < WIDTH; x += 96) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, HEIGHT);
+            ctx.stroke();
+          }
+          for (let y = 90; y < HEIGHT; y += 90) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(WIDTH, y);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        function background(color = PAPER, grid = GREEN) {
+          ctx.fillStyle = color;
+          ctx.fillRect(0, 0, WIDTH, HEIGHT);
+          gridLines(grid);
+        }
+
+        function rectangularWipe(progress, color, grid, centerX = WIDTH / 2, centerY = HEIGHT / 2, drawContent = null) {
+          const amount = exponentialOut(progress);
+          const width = (WIDTH + 320) * amount;
+          const height = (HEIGHT + 240) * amount;
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(centerX - width / 2, centerY - height / 2, width, height);
+          ctx.clip();
+          background(color, grid);
+          if (drawContent) drawContent();
+          ctx.restore();
+        }
+
+        function circularWipe(progress, color, grid, centerX, centerY) {
+          const radius = 2000 * exponentialOut(progress);
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+          ctx.clip();
+          background(color, grid);
+          ctx.restore();
+        }
+
+        function text(value, x, y, size, color = GREEN, weight = 700, align = "center") {
+          ctx.save();
+          ctx.font = `${weight} ${size}px "Noto Sans KR", sans-serif`;
+          ctx.textAlign = align;
+          ctx.textBaseline = "middle";
+          ctx.fillStyle = color;
+          ctx.fillText(value, x, y);
+          ctx.restore();
+        }
+
+        function movingText(value, x, y, size, color, velocityX = 0, velocityY = 0, weight = 800) {
+          const speed = Math.hypot(velocityX, velocityY);
+          if (speed > 80) {
+            const blur = Math.min(7, speed * 0.004);
+            ctx.save();
+            ctx.filter = `blur(${blur.toFixed(2)}px)`;
+            ctx.globalAlpha = 0.18;
+            text(value, x - velocityX * 0.013, y - velocityY * 0.013, size, color, weight);
+            ctx.restore();
+          }
+          text(value, x, y, size, color, weight);
+        }
+
+        function line(x1, y1, x2, y2, color = GREEN, width = 4) {
+          ctx.save();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = width;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        function poly(points, fill, stroke = null, lineWidth = 3) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(points[0][0], points[0][1]);
+          for (let i = 1; i < points.length; i += 1) ctx.lineTo(points[i][0], points[i][1]);
+          ctx.closePath();
+          ctx.fillStyle = fill;
+          ctx.fill();
+          if (stroke) {
+            ctx.strokeStyle = stroke;
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        function rect(x, y, width, height, fill, stroke = null, lineWidth = 3) {
+          ctx.save();
+          ctx.fillStyle = fill;
+          ctx.fillRect(x, y, width, height);
+          if (stroke) {
+            ctx.strokeStyle = stroke;
+            ctx.lineWidth = lineWidth;
+            ctx.strokeRect(x, y, width, height);
+          }
+          ctx.restore();
+        }
+
+        function circle(x, y, radius, fill, stroke = null, lineWidth = 3) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(x, y, Math.max(0.5, radius), 0, Math.PI * 2);
+          if (fill) {
+            ctx.fillStyle = fill;
+            ctx.fill();
+          }
+          if (stroke) {
+            ctx.strokeStyle = stroke;
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        function logo(x, y, scale = 1) {
+          const markSize = 66 * scale;
+          ctx.save();
+          ctx.translate(x - 250 * scale, y);
+          ctx.fillStyle = LIME;
+          ctx.fillRect(-markSize / 2, -markSize / 2, markSize, markSize);
+          line(-19 * scale, 10 * scale, -3 * scale, -9 * scale, GREEN, 5 * scale);
+          line(-3 * scale, -9 * scale, 14 * scale, 10 * scale, GREEN, 5 * scale);
+          circle(14 * scale, 10 * scale, 4 * scale, GREEN);
+          ctx.restore();
+          text("개념산책", x + 120 * scale, y, 77 * scale, GREEN, 800);
+          text("질문에서 개념으로", x + 120 * scale, y + 71 * scale, 24 * scale, GREEN, 500);
+        }
+
+        function drawLoopFrame() {
+          background();
+          logo(WIDTH / 2, HEIGHT / 2 - 22, 1.3);
+        }
+
+        function drawKineticType(time) {
+          background();
+          const intro = exponentialOut(time / 0.72);
+          const logoX = mix(WIDTH / 2, -410, intro);
+          const logoY = mix(HEIGHT / 2 - 25, -180, intro);
+          const logoScale = mix(1, 0.55, intro);
+          ctx.save();
+          ctx.translate(logoX, logoY);
+          ctx.scale(logoScale, logoScale);
+          logo(0, 0, 1);
+          ctx.restore();
+
+          const pulse = beatPulse(time);
+          const titleProgress = exponentialOut(time / 0.8);
+          const titleSize = mix(20, 286 + pulse * 10, titleProgress);
+          const words = ["왜?", "무엇이?", "어디서?", "관계?", "어떻게?", "개념"];
+          const beat = Math.min(words.length - 1, Math.floor(time / BEAT));
+          const arrival = criticalSpring(fract(time / BEAT) / 0.48);
+          const word = words[beat];
+          const travel = smooth((time - 1.35) / 0.45);
+          const titleX = mix(WIDTH / 2 + 125, WIDTH / 2, arrival) - 135 * travel;
+          const velocityX = arrival < 1 ? -520 : travel > 0 && travel < 1 ? -640 : 0;
+          movingText(word, titleX, 505 + pulse * 6, titleSize, GREEN, velocityX, 0, 900);
+
+          const lineStart = mix(220, 690, smooth((time - 0.8) / 1.25));
+          const lineEnd = mix(220, 1475, exponentialOut((time - 0.45) / 2.1));
+          const lineY = mix(700, 558, smooth((time - 1.4) / 0.9));
+          line(WIDTH / 2 - lineStart, lineY, WIDTH / 2 + lineEnd, lineY, GREEN, 5);
+          const pointX = mix(WIDTH / 2, 1450, smooth((time - 2.18) / 0.78));
+          circle(pointX, lineY, 15 + pulse * 7, LIME, GREEN, 3);
+
+          if (time > 2.58) {
+            const bridge = smooth((time - 2.7) / 0.3);
+            const seedX = mix(pointX, 700, bridge);
+            const seedY = mix(lineY, 525, bridge);
+            circularWipe((time - 2.7) / 0.3, GREEN, PAPER, seedX, seedY);
+            circle(seedX, seedY, mix(15, 10, bridge), LIME, PAPER, 3);
+          }
+        }
+
+        function drawConceptMap(time) {
+          background(GREEN, PAPER);
+          const p = clamp(time / 3);
+          const reveal = exponentialOut(p / 0.75);
+          const pulse = beatPulse(time + 3);
+          const centerX = WIDTH / 2;
+          const centerY = 525;
+          const startX = mix(260, 610, smooth(p / 0.45));
+          const rootX = mix(700, 960, smooth(p / 0.42));
+          const rootRadius = mix(5, 92, reveal) + pulse * 5;
+
+          line(startX, centerY + 1, rootX - rootRadius, centerY + 1, PAPER, 6);
+          circle(rootX, centerY, rootRadius, LIME, PAPER, 4);
+          text("개념", rootX, centerY, 37, GREEN, 700);
+
+          const nodes = [
+            { x: mix(1150, 1340, smooth(p)), y: mix(310, 275, smooth(p)), label: "뜻", sub: "핵심 의미" },
+            { x: mix(1170, 1390, smooth(p)), y: mix(530, 535, smooth(p)), label: "사례", sub: "구체적인 장면" },
+            { x: mix(1150, 1340, smooth(p)), y: mix(750, 795, smooth(p)), label: "전이", sub: "새로운 맥락" }
+          ];
+          for (let i = 0; i < nodes.length; i += 1) {
+            const node = nodes[i];
+            const spread = exponentialOut((p - i * 0.11) / 0.68);
+            const radius = 68 * spread + pulse * 3;
+            const anchorX = rootX + rootRadius * 0.7;
+            line(anchorX, centerY, node.x - radius, node.y, PAPER, 4);
+            circle(node.x, node.y, radius, i === 1 ? LIME : PAPER, PAPER, 4);
+            if (radius > 35) text(node.label, node.x, node.y, 27, GREEN, 700);
+            if (radius > 50) text(node.sub, node.x + 76, node.y + 3, 18, PAPER, 500, "left");
+          }
+
+          const frame = smooth((p - 0.68) / 0.32);
+          const frameW = mix(0, 760, frame);
+          const frameH = mix(0, 500, frame);
+          if (frame > 0) {
+            ctx.save();
+            ctx.globalAlpha = frame;
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = PAPER;
+            ctx.strokeRect(centerX - frameW / 2, centerY - frameH / 2, frameW, frameH);
+            ctx.restore();
+          }
+          if (p > 0.9) {
+            rectangularWipe((p - 0.9) / 0.1, PAPER, GREEN, rootX, centerY, () => {
+            const cardCenterY = 532;
+            rect(centerX - 415, cardCenterY - 245, 830, 490, PAPER, GREEN, 3);
+            text("개념은 연결될 때", centerX, cardCenterY - 89, 39, GREEN, 500);
+            text("깊이가 생긴다", centerX, cardCenterY - 7, 76, GREEN, 800);
+            line(centerX - 184, cardCenterY + 63, centerX + 184, cardCenterY + 63, GREEN, 3);
+            ["개념", "근거", "전이"].forEach((label, index) => {
+              const x = centerX - 148 + index * 148;
+              circle(x, cardCenterY + 123, 8, index === 1 ? LIME : GREEN);
+              text(label, x, cardCenterY + 161, 21, GREEN, 600);
+            });
+            });
+          }
+        }
+
+        function drawFoldedCard(time) {
+          background();
+          const p = clamp(time / 3);
+          const settle = criticalSpring(p);
+          const pulse = beatPulse(time + 6);
+          const leave = smooth((p - 0.86) / 0.14);
+          const centerX = mix(960, 820, leave);
+          const centerY = 532 + pulse * 3;
+          const width = mix(830, 790, settle) * (1 - 0.14 * leave);
+          const height = mix(490, 455, settle) * (1 - 0.12 * leave);
+          const angle = 0.9 * Math.sin(Math.PI * smooth(p));
+          const frontWidth = width * Math.max(0.12, Math.cos(angle));
+          const sideDepth = width * Math.sin(angle) * 0.35;
+          const left = centerX - frontWidth / 2;
+          const right = centerX + frontWidth / 2;
+          const top = centerY - height / 2;
+          const bottom = centerY + height / 2;
+
+          const stack = [2, 1, 0];
+          for (const layer of stack) {
+            const offset = (2 - layer) * 19 * smooth(p);
+            const yOffset = -(2 - layer) * 13 * smooth(p);
+            const layerLeft = left + offset;
+            const layerRight = right + offset;
+            const layerTop = top + yOffset;
+            const layerBottom = bottom + yOffset;
+            poly([[layerRight, layerTop], [layerRight + sideDepth, layerTop - 8], [layerRight + sideDepth, layerBottom - 8], [layerRight, layerBottom]], layer === 0 ? GREEN : LIME, GREEN, 2);
+            poly([[layerLeft, layerTop], [layerRight, layerTop], [layerRight, layerBottom], [layerLeft, layerBottom]], layer === 0 ? PAPER : WHITE, GREEN, 3);
+          }
+
+          const faceScale = Math.max(0.18, Math.cos(angle));
+          ctx.save();
+          ctx.translate(centerX, centerY);
+          ctx.scale(faceScale, 1);
+          text("개념은 연결될 때", 0, -89, 39, GREEN, 500);
+          text("깊이가 생긴다", 0, -7, 76, GREEN, 800);
+          line(-184, 63, 184, 63, GREEN, 3);
+          const labels = ["개념", "근거", "전이"];
+          labels.forEach((label, index) => {
+            const x = -148 + index * 148;
+            circle(x, 123, 8, index === 1 ? LIME : GREEN);
+            text(label, x, 161, 21, GREEN, 600);
+          });
+          ctx.restore();
+
+          line(1100 + sideDepth, centerY + 12, mix(1100 + sideDepth, 1550, leave), centerY + 12, GREEN, 4);
+          circle(mix(1100 + sideDepth, 1550, leave), centerY + 12, 12 + pulse * 4, LIME, GREEN, 2);
+          if (p > 0.9) {
+            rectangularWipe((p - 0.9) / 0.1, LIME, GREEN, centerX, centerY, () => {
+            rect(325, 520, 1270, 190, PAPER, GREEN, 4);
+            text("오늘의 개념 여정", 381, 569, 24, GREEN, 600, "left");
+            text("질문에서 전이까지", 860, 623, 44, GREEN, 800, "left");
+            text("01", 1500, 593, 52, GREEN, 700);
+            text("/ 05", 1502, 644, 19, GREEN, 500);
+            line(385, 675, 1535, 675, GREEN, 4);
+            line(385, 675, 385, 675, LIME, 13);
+            ["질문", "개념", "탐구", "이해", "전이"].forEach((label, index) => {
+              const cx = 385 + (1150 / 4) * index;
+              circle(cx, 675, index === 0 ? 25 : 17, index === 0 ? LIME : PAPER, GREEN, 3);
+              text(label, cx, 746, 18, GREEN, index === 0 ? 700 : 500);
+            });
+            });
+          }
+        }
+
+        function drawProgressUI(time) {
+          background(LIME, GREEN);
+          const p = clamp(time / 3);
+          const pulse = beatPulse(time + 9);
+          const x = 325;
+          const y = 520;
+          const width = 1270;
+          const height = 190;
+          const exit = smooth((p - 0.88) / 0.12);
+          const scale = 1 - 0.72 * exit;
+          ctx.save();
+          ctx.translate(WIDTH / 2, HEIGHT / 2);
+          ctx.scale(scale, scale);
+          ctx.translate(-WIDTH / 2, -HEIGHT / 2);
+
+          rect(x, y, width, height, PAPER, GREEN, 4);
+          text("오늘의 개념 여정", x + 56, y + 49, 24, GREEN, 600, "left");
+          text("질문에서 전이까지", x + 56, y + 103, 44, GREEN, 800, "left");
+          const completed = Math.min(5, Math.floor(p * 5) + 1);
+          text(String(completed).padStart(2, "0"), x + width - 95, y + 73, 52, GREEN, 700);
+          text("/ 05", x + width - 93, y + 124, 19, GREEN, 500);
+
+          const labels = ["질문", "개념", "탐구", "이해", "전이"];
+          const baseX = x + 60;
+          const gap = (width - 120) / 4;
+          line(baseX, y + 155, baseX + width - 120, y + 155, GREEN, 4);
+          line(baseX, y + 155, baseX + gap * Math.min(4, p * 5), y + 155, LIME, 13);
+          labels.forEach((label, index) => {
+            const cx = baseX + gap * index;
+            const active = index < completed;
+            circle(cx, y + 155, index === completed - 1 ? 22 + pulse * 3 : 17, active ? LIME : PAPER, GREEN, 3);
+            text(label, cx, y + 226, 18, GREEN, active ? 700 : 500);
+          });
+          ctx.restore();
+
+          if (p > 0.88) {
+            rectangularWipe((p - 0.88) / 0.12, GREEN, PAPER, WIDTH / 2, HEIGHT / 2, () => {
+            const points = [
+              [410, 730],
+              [660, 635],
+              [905, 705],
+              [1160, 570],
+              [1410, 655],
+              [1670, 510]
+            ];
+            ctx.save();
+            ctx.lineWidth = 12;
+            ctx.strokeStyle = PAPER;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.beginPath();
+            points.forEach(([x, y], index) => {
+              if (index === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+            ctx.restore();
+            points.slice(1).forEach(([x, y], index) => circle(x, y, 12 + (index === 2 ? beatPulse(12) * 5 : 0), LIME, PAPER, 3));
+            text("질문은 길이 되고", WIDTH / 2, 940, 36, PAPER, 600);
+            text("개념은 세계가 된다", WIDTH / 2, 994, 51, PAPER, 800);
+            });
+          }
+        }
+
+        function drawIsoColumn(x, baseY, width, height, depth, phase) {
+          const grow = criticalSpring(phase);
+          const h = height * grow;
+          const d = depth * grow;
+          const topY = baseY - h;
+          const left = x - width / 2;
+          const right = x + width / 2;
+          poly([[left, baseY], [right, baseY], [right, topY], [left, topY]], PAPER, BLACK, 2);
+          poly([[right, baseY], [right + d, baseY - d * 0.34], [right + d, topY - d * 0.34], [right, topY]], BLACK, PAPER, 2);
+          poly([[left, topY], [right, topY], [right + d, topY - d * 0.34], [left + d, topY - d * 0.34]], LIME, PAPER, 2);
+          line(left + width * 0.22, topY + 25, left + width * 0.22, baseY - 18, GREEN, 2);
+        }
+
+        function drawConceptLandscape(time) {
+          background(GREEN, PAPER);
+          const p = clamp(time / 3);
+          const settle = smooth(p);
+          const pulse = beatPulse(time + 12);
+          const baseY = 860;
+          const shift = (1 - settle) * 80;
+
+          const route = [
+            [330, 660],
+            [580, 565],
+            [825, 635],
+            [1080, 500],
+            [1330, 585],
+            [1590, 440]
+          ];
+          ctx.save();
+          ctx.lineWidth = 12;
+          ctx.strokeStyle = PAPER;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.beginPath();
+          route.forEach(([x, y], i) => {
+            const currentX = mix(x + shift, route[i][0], settle);
+            const currentY = mix(y + 70 * (1 - settle), route[i][1], settle);
+            if (i === 0) ctx.moveTo(currentX, currentY);
+            else ctx.lineTo(currentX, currentY);
+          });
+          ctx.stroke();
+          ctx.restore();
+
+          const towers = [
+            [450, 330, 150, 300],
+            [680, 250, 170, 390],
+            [930, 405, 206, 500],
+            [1190, 282, 170, 405],
+            [1450, 390, 150, 320]
+          ];
+          towers.forEach(([x, z, width, height], index) => {
+            const delayed = clamp((p - index * 0.045) / 0.76);
+            if (delayed > 0.02) drawIsoColumn(x, baseY, width, height, 66, delayed);
+            const nodeX = mix(route[index + 1][0] + shift, route[index + 1][0], settle);
+            const nodeY = mix(route[index + 1][1] + 70 * (1 - settle), route[index + 1][1] - z * 0.12, settle);
+            circle(nodeX, nodeY, 12 + (index === 2 ? pulse * 5 : 0), LIME, PAPER, 3);
+          });
+
+          text("질문은 길이 되고", WIDTH / 2, 940, 36, PAPER, 600);
+          text("개념은 세계가 된다", WIDTH / 2, 994, 51, PAPER, 800);
+          if (p > 0.66) {
+            const titleReveal = (p - 0.66) / 0.07;
+            rectangularWipe(titleReveal, PAPER, GREEN, WIDTH / 2, HEIGHT / 2, () => logo(WIDTH / 2, HEIGHT / 2 - 22, 1.3));
+          }
+        }
+
+        function seek(time) {
+          const raw = Number.isFinite(Number(time)) ? Number(time) : 0;
+          const t = ((raw % DURATION) + DURATION) % DURATION;
+          if (t === 0 || t >= 14.5) {
+            drawLoopFrame();
+          } else if (t < 3) {
+            drawKineticType(t);
+          } else if (t < 6) {
+            drawConceptMap(t - 3);
+          } else if (t < 9) {
+            drawFoldedCard(t - 6);
+          } else if (t < 12) {
+            drawProgressUI(t - 9);
+          } else {
+            drawConceptLandscape(t - 12);
+          }
+          return t;
+        }
+
+        function addKick(context, time, master) {
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+          oscillator.type = "sine";
+          oscillator.frequency.setValueAtTime(142, time);
+          oscillator.frequency.exponentialRampToValueAtTime(43, time + 0.13);
+          gain.gain.setValueAtTime(0.0001, time);
+          gain.gain.exponentialRampToValueAtTime(0.45, time + 0.008);
+          gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.24);
+          oscillator.connect(gain);
+          gain.connect(master);
+          oscillator.start(time);
+          oscillator.stop(time + 0.26);
+        }
+
+        function addSceneHit(context, time, master, strength = 1) {
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+          oscillator.type = "triangle";
+          oscillator.frequency.setValueAtTime(630, time);
+          oscillator.frequency.exponentialRampToValueAtTime(170, time + 0.18);
+          gain.gain.setValueAtTime(0.0001, time);
+          gain.gain.exponentialRampToValueAtTime(0.19 * strength, time + 0.004);
+          gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.22);
+          oscillator.connect(gain);
+          gain.connect(master);
+          oscillator.start(time);
+          oscillator.stop(time + 0.24);
+        }
+
+        async function renderAudioWav() {
+          const AudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+          if (!AudioContext) throw new Error("OfflineAudioContext is not supported by this browser.");
+          const sampleRate = 48000;
+          const context = new AudioContext(2, sampleRate * DURATION, sampleRate);
+          const master = context.createGain();
+          master.gain.value = 0.48;
+          master.connect(context.destination);
+
+          for (let beat = 0; beat < DURATION / BEAT; beat += 1) addKick(context, beat * BEAT + 0.008, master);
+          [0.008, 3, 6, 9, 12, 14].forEach((time, index) => addSceneHit(context, time, master, index === 4 ? 1.3 : 1));
+
+          const riser = context.createOscillator();
+          const riserGain = context.createGain();
+          const filter = context.createBiquadFilter();
+          riser.type = "sawtooth";
+          filter.type = "lowpass";
+          filter.frequency.setValueAtTime(180, 10.85);
+          filter.frequency.exponentialRampToValueAtTime(3800, 12);
+          riser.frequency.setValueAtTime(74, 10.85);
+          riser.frequency.exponentialRampToValueAtTime(520, 12);
+          riserGain.gain.setValueAtTime(0.0001, 10.85);
+          riserGain.gain.exponentialRampToValueAtTime(0.055, 11.96);
+          riserGain.gain.exponentialRampToValueAtTime(0.0001, 12.06);
+          riser.connect(filter);
+          filter.connect(riserGain);
+          riserGain.connect(master);
+          riser.start(10.85);
+          riser.stop(12.08);
+
+          const rendered = await context.startRendering();
+          const channelCount = rendered.numberOfChannels;
+          const frameCount = rendered.length;
+          const dataSize = frameCount * channelCount * 2;
+          const wav = new ArrayBuffer(44 + dataSize);
+          const view = new DataView(wav);
+          const writeString = (offset, value) => {
+            for (let i = 0; i < value.length; i += 1) view.setUint8(offset + i, value.charCodeAt(i));
+          };
+          writeString(0, "RIFF");
+          view.setUint32(4, 36 + dataSize, true);
+          writeString(8, "WAVE");
+          writeString(12, "fmt ");
+          view.setUint32(16, 16, true);
+          view.setUint16(20, 1, true);
+          view.setUint16(22, channelCount, true);
+          view.setUint32(24, sampleRate, true);
+          view.setUint32(28, sampleRate * channelCount * 2, true);
+          view.setUint16(32, channelCount * 2, true);
+          view.setUint16(34, 16, true);
+          writeString(36, "data");
+          view.setUint32(40, dataSize, true);
+          let offset = 44;
+          const channels = Array.from({ length: channelCount }, (_, index) => rendered.getChannelData(index));
+          for (let frame = 0; frame < frameCount; frame += 1) {
+            for (let channel = 0; channel < channelCount; channel += 1) {
+              const sample = Math.max(-1, Math.min(1, channels[channel][frame]));
+              view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+              offset += 2;
+            }
+          }
+          let binary = "";
+          const bytes = new Uint8Array(wav);
+          for (let start = 0; start < bytes.length; start += 0x8000) {
+            binary += String.fromCharCode(...bytes.subarray(start, Math.min(start + 0x8000, bytes.length)));
+          }
+          return btoa(binary);
+        }
+
+        window.seek = seek;
+        window.renderAudioWav = renderAudioWav;
+        seek(0);
+      })();
+    </script>
+  </body>
+</html>

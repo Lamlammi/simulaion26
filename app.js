@@ -135,6 +135,17 @@ function renderHome() {
       </div>
       <button class="primary-button" data-action="studio"><span aria-hidden="true">＋</span> 교과서로 수업 만들기</button>
     </section>
+    <section class="intro-showcase" aria-label="개념산책 모션 인트로">
+      <div class="intro-video-wrap">
+        <video class="intro-video" src="intro.mp4" autoplay muted loop playsinline controls preload="metadata" aria-label="질문이 개념의 숲으로 이어지는 15초 애니메이션"></video>
+      </div>
+      <div class="intro-copy">
+        <span class="intro-kicker">FROM QUESTION TO CONCEPT</span>
+        <h2>질문 한 점이<br>개념의 숲으로 자라요.</h2>
+        <p>개념을 연결하고, 근거를 찾고, 새로운 상황에 적용하는 배움의 여정을 시작해요.</p>
+        <button class="secondary-button" data-action="studio">나만의 개념으로 시작하기 <span aria-hidden="true">→</span></button>
+      </div>
+    </section>
     <section class="stats-row" aria-label="학습 통계">
       <div class="stat-card"><span class="stat-icon">✦</span><div><span class="stat-value">${state.points}</span><span class="stat-label">모은 탐구 포인트</span></div></div>
       <div class="stat-card"><span class="stat-icon">◷</span><div><span class="stat-value">${inProgress}</span><span class="stat-label">이어 하는 학습</span></div></div>
