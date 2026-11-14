@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f6f7f2">
+    <title>개념산책 — 교과서 개념 학습</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#" data-action="home" aria-label="개념산책 홈">
+          <span class="brand-mark" aria-hidden="true">ㄱ</span>
+          <span>개념<span class="brand-light">산책</span></span>
+        </a>
+        <nav class="top-nav" aria-label="주 메뉴">
+          <button class="nav-link is-active" data-action="home">학습하기</button>
+          <button class="nav-link" data-action="studio">나만의 수업 만들기</button>
+        </nav>
+        <div class="top-meta">
+          <span class="save-status"><span class="status-dot"></span> 내 기기에 저장</span>
+          <button class="avatar" aria-label="학습자 프로필">나</button>
+        </div>
+      </header>
+      <main id="app" class="page-content" tabindex="-1"></main>
+      <footer class="site-footer">
+        <span>개념을 외우는 데서 멈추지 않고, 연결하고 설명하고 적용해요.</span>
+        <button class="text-button" data-action="about">학습 설계 보기</button>
+      </footer>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
